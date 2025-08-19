@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArchiGest - Gestion d'Archives</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f4f7fa;
+        }
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 256px;
+            background-color: white;
+            border-right: 1px solid #e5e7eb;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 50;
+        }
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            font-size: 16px;
+            color: #374151;
+            text-decoration: none;
+            transition: background-color 0.2s, color 0.2s;
+            cursor: pointer;
+        }
+        .sidebar-link:hover {
+            background-color: #f3f4f6;
+        }
+        .sidebar-link.active {
+            background-color: #e5e7eb;
+            color: #2563eb;
+            font-weight: 600;
+        }
+        .sidebar-link.active svg {
+            color: #2563eb;
+        }
+        .content {
+            margin-left: 256px;
+            padding: 24px;
+            width: calc(100% - 256px);
+        }
+        .card {
+            background-color: white;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus {
+            border-color: #2563eb;
+        }
+        .form-select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 16px;
+            background-color: white;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-select:focus {
+            border-color: #2563eb;
+        }
+        .btn-primary {
+            background-color: #2563eb;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background-color: #6b7280;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+        .truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .hidden {
+            display: none;
+        }
+        @media (max-width: 1023px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .content {
+                margin-left: 0;
+                width: 100%;
+            }
+            #mobile-backdrop {
+                display: none;
+            }
+            #mobile-backdrop.open {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile backdrop -->
+    <div id="mobile-backdrop" class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
+
+    <div class="container">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 rounded-lg">
+                <img src="log-removebg-preview.png" alt="Logo" style="width: 93px; height: 93px;">
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-gray-700">ArchiGest</h1>
+                <p class="text-sm text-gray-500">Gestion d'Archives</p>
+            </div>
+        </div>
+    </div>
+    <nav class="mt-6 space-y-1">
+        <button class="sidebar-link active" data-tab="dashboard">
+            <i data-lucide="home" class="h-5 w-5 mr-3"></i>
+            Tableau de Bord
+        </button>
+        <button class="sidebar-link" data-tab="upload">
+            <i data-lucide="upload" class="h-5 w-5 mr-3"></i>
+            Ajouter Archive
+        </button>
+        <button class="sidebar-link" data-tab="search">
+            <i data-lucide="search" class="h-5 w-5 mr-3"></i>
+            Rechercher
+        </button>
+    </nav>
+    <div class="absolute bottom-6 left-2 right-2">
+        <div class="bg-blue-50 p-4 rounded-lg">
+            <p class="text-sm font-medium text-blue-900">Archives Système</p>
+            <p class="text-xs text-blue-600 mt-1">Organisées par année, mois, armoire et section</p>
+        </div>
+    </div>
+</aside>
+
+        <!-- Content Area -->
+        <main class="content">
+            <!-- Dashboard Section -->
+            <section id="dashboard-section" class="section">
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-gray-900">Tableau de Bord</h1>
+                    <p class="text-gray-600 mt-2">Vue d'ensemble de vos archives numériques</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="stats-cards">
+                    <div class="card">
+                        <div class="flex items-center">
+                            <div class="bg-blue-100 p-3 rounded-lg">
+                                <i data-lucide="file-text" class="h-6 w-6 text-blue-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Total Archives</p>
+                                <p class="text-2xl font-bold text-gray-900" id="total-archives">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="flex items-center">
+                            <div class="bg-green-100 p-3 rounded-lg">
+                                <i data-lucide="folder-open" class="h-6 w-6 text-green-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Armoires</p>
+                                <p class="text-2xl font-bold text-gray-900" id="departments-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="flex items-center">
+                            <div class="bg-orange-100 p-3 rounded-lg">
+                                <i data-lucide="calendar" class="h-6 w-6 text-orange-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Ce Mois</p>
+                                <p class="text-2xl font-bold text-gray-900" id="this-month-archives">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                    <div class="card">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Répartition par Armoire et Section</h3>
+                        <div id="department-stats" class="space-y-3">
+                            <p class="text-gray-500 text-center py-8">Aucune archive disponible</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Archives Récentes</h3>
+                        <div id="recent-archives" class="space-y-3">
+                            <p class="text-gray-500 text-center py-8">Aucune archive récente</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Upload Section -->
+            <section id="upload-section" class="section hidden">
+                <div id="upload-container" class="max-w-2xl mx-auto">
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900">Ajouter une Archive</h1>
+                        <p class="text-gray-600 mt-2">Téléchargez et organisez vos documents numériques</p>
+                    </div>
+                    <div id="success-message" class="hidden max-w-md mx-auto">
+                        <div class="card text-center">
+                            <div class="bg-green-100 w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center">
+                                <i data-lucide="check" class="h-8 w-8 text-green-600"></i>
+                            </div>
+                            <h2 class="text-xl font-semibold text-gray-900 mb-2">Archive Ajoutée !</h2>
+                            <p class="text-gray-600">Le document a été archivé avec succès dans le système.</p>
+                        </div>
+                    </div>
+                    <div id="upload-form-container" class="card">
+                        <form id="upload-form" class="space-y-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Sélectionner un Fichier *</label>
+                                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                                    <input type="file" id="file-upload" class="hidden" required />
+                                    <label for="file-upload" class="cursor-pointer">
+                                        <i data-lucide="upload" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+                                        <p id="file-name-display" class="text-lg font-medium text-gray-900">Cliquez pour sélectionner un fichier</p>
+                                        <p class="text-sm text-gray-500 mt-1">PDF, Word, Excel, Images et autres formats supportés</p>
+                                    </label>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="fileName" class="block text-sm font-medium text-gray-700 mb-2">Id du Fichier *</label>
+                                <input type="text" id="fileName" class="form-input" placeholder="Entrez l'Id du fichier" required />
+                            </div>
+                            <div>
+                                <label for="department" class="block text-sm font-medium text-gray-700 mb-2">Armoire *</label>
+                                <select id="department" class="form-select" required>
+                                    <option value="">Sélectionnez une armoire</option>
+                                    <option value="Finance">Finance</option>
+                                    <option value="Juridique">Juridique</option>
+                                    <option value="Logistique">Logistique</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="section" class="block text-sm font-medium text-gray-700 mb-2">Section *</label>
+                                <select id="section" class="form-select" required>
+                                    <option value="">Sélectionnez une section</option>
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                    <option value="C">C</option>
+                                    <option value="D">D</option>
+                                    <option value="E">E</option>
+                                    <option value="F">F</option>
+                                    <option value="G">G</option>
+                                    <option value="H">H</option>
+                                    <option value="I">I</option>
+                                    <option value="J">J</option>
+                                    <option value="K">K</option>
+                                    <option value="L">L</option>
+                                    <option value="M">M</option>
+                                    <option value="N">N</option>
+                                    <option value="O">O</option>
+                                    <option value="P">P</option>
+                                    <option value="Q">Q</option>
+                                    <option value="R">R</option>
+                                    <option value="S">S</option>
+                                    <option value="T">T</option>
+                                    <option value="U">U</option>
+                                    <option value="V">V</option>
+                                    <option value="W">W</option>
+                                    <option value="X">X</option>
+                                    <option value="Y">Y</option>
+                                    <option value="Z">Z</option>
+                                </select>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="font-medium text-gray-900 mb-2 flex items-center">
+                                    <i data-lucide="file-text" class="h-5 w-5 mr-2"></i>
+                                    Informations Automatiques
+                                </h3>
+                                <div class="grid grid-cols-3 gap-4 text-sm">
+                                    <div>
+                                        <span class="text-gray-600">Jour:</span>
+                                        <p id="current-day" class="font-medium"></p>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Mois:</span>
+                                        <p id="current-month" class="font-medium"></p>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Année:</span>
+                                        <p id="current-year" class="font-medium"></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex justify-end space-x-4">
+                                <button type="button" id="cancel-btn" class="btn-secondary">Annuler</button>
+                                <button type="submit" id="submit-btn" class="btn-primary flex items-center" disabled>
+                                    <i data-lucide="upload" class="h-4 w-4 mr-2"></i>
+                                    Archiver le Document
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Search Section -->
+            <section id="search-section" class="section hidden">
+                <div class="max-w-7xl mx-auto space-y-6">
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900">Rechercher dans les Archives</h1>
+                        <p class="text-gray-600 mt-2">Trouvez rapidement vos documents archivés</p>
+                    </div>
+                    <div class="card">
+                        <div class="space-y-4">
+                            <div class="relative">
+                                <i data-lucide="search" class="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                                <input type="text" id="search-term" placeholder="Rechercher par id de fichier..." class="form-input pl-10" />
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Armoire</label>
+                                    <select id="search-department" class="form-select">
+                                        <option value="">Toutes les armoires</option>
+                                        <option value="Finance">Finance</option>
+                                        <option value="Juridique">Juridique</option>
+                                        <option value="Logistique">Logistique</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Section</label>
+                                    <select id="search-section" class="form-select">
+                                        <option value="">Toutes les sections</option>
+                                        <option value="A">A</option>
+                                        <option value="B">B</option>
+                                        <option value="C">C</option>
+                                        <option value="D">D</option>
+                                        <option value="E">E</option>
+                                        <option value="F">F</option>
+                                        <option value="G">G</option>
+                                        <option value="H">H</option>
+                                        <option value="I">I</option>
+                                        <option value="J">J</option>
+                                        <option value="K">K</option>
+                                        <option value="L">L</option>
+                                        <option value="M">M</option>
+                                        <option value="N">N</option>
+                                        <option value="O">O</option>
+                                        <option value="P">P</option>
+                                        <option value="Q">Q</option>
+                                        <option value="R">R</option>
+                                        <option value="S">S</option>
+                                        <option value="T">T</option>
+                                        <option value="U">U</option>
+                                        <option value="V">V</option>
+                                        <option value="W">W</option>
+                                        <option value="X">X</option>
+                                        <option value="Y">Y</option>
+                                        <option value="Z">Z</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Mois</label>
+                                    <select id="search-month" class="form-select">
+                                        <option value="">Tous les mois</option>
+                                        <option value="0">Janvier</option>
+                                        <option value="1">Février</option>
+                                        <option value="2">Mars</option>
+                                        <option value="3">Avril</option>
+                                        <option value="4">Mai</option>
+                                        <option value="5">Juin</option>
+                                        <option value="6">Juillet</option>
+                                        <option value="7">Août</option>
+                                        <option value="8">Septembre</option>
+                                        <option value="9">Octobre</option>
+                                        <option value="10">Novembre</option>
+                                        <option value="11">Décembre</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Année</label>
+                                    <select id="search-year" class="form-select">
+                                        <option value="">Toutes les années</option>
+                                        <option value="2015">2015</option>
+                                        <option value="2016">2016</option>
+                                        <option value="2017">2017</option>
+                                        <option value="2018">2018</option>
+                                        <option value="2019">2019</option>
+                                        <option value="2020">2020</option>
+                                        <option value="2021">2021</option>
+                                        <option value="2022">2022</option>
+                                        <option value="2023">2023</option>
+                                        <option value="2024">2024</option>
+                                        <option value="2025">2025</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-end">
+                                    <button id="clear-filters" class="btn-secondary w-full flex items-center justify-center">
+                                        <i data-lucide="filter" class="h-4 w-4 mr-2"></i>
+                                        Effacer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-lg font-semibold text-gray-900">Résultats de la recherche</h2>
+                            <span id="results-count" class="text-sm text-gray-500">0 document(s) trouvé(s)</span>
+                        </div>
+                        <div id="search-results" class="space-y-3">
+                            <div class="text-center py-12">
+                                <i data-lucide="search" class="h-12 w-12 text-gray-300 mx-auto mb-4"></i>
+                                <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun résultat trouvé</h3>
+                                <p class="text-gray-500">Essayez de modifier vos critères de recherche ou d'ajouter des archives.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Sample archive data with sections
+        let archives = [
+            { id: '1', fileName: 'RD12345WO0klf', department: 'Finance', section: 'A', month: 0, year: 2025, day: 15, fileSize: 1048576, uploadDate: '2025-01-15' },
+            { id: '2', fileName: 'HG29GJ34JDMl4', department: 'Juridique', section: 'B', month: 7, year: 2025, day: 14, fileSize: 524288, uploadDate: '2025-08-14' },
+        ];
+
+        const months = [
+            'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+            'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+        ];
+
+        // Sidebar navigation
+        let activeTab = 'dashboard';
+        const sections = document.querySelectorAll('.section');
+        const sidebarButtons = document.querySelectorAll('.sidebar-link');
+        const mobileBackdrop = document.getElementById('mobile-backdrop');
+        const sidebar = document.getElementById('sidebar');
+
+        function setActiveTab(tab) {
+            activeTab = tab;
+            sections.forEach(section => {
+                section.classList.add('hidden');
+                if (section.id === `${tab}-section`) {
+                    section.classList.remove('hidden');
+                }
+            });
+            sidebarButtons.forEach(button => {
+                button.classList.remove('active');
+                if (button.getAttribute('data-tab') === tab) {
+                    button.classList.add('active');
+                }
+            });
+            if (window.innerWidth < 1024) {
+                sidebar.classList.remove('open');
+                mobileBackdrop.classList.add('hidden');
+            }
+        }
+
+        sidebarButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tab = button.getAttribute('data-tab');
+                setActiveTab(tab);
+            });
+        });
+
+        mobileBackdrop.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            mobileBackdrop.classList.add('hidden');
+        });
+
+        function toggleMobileSidebar() {
+            if (window.innerWidth < 1024) {
+                sidebar.classList.toggle('open');
+                mobileBackdrop.classList.toggle('hidden');
+            }
+        }
+
+        // Dashboard logic
+        function updateDashboard() {
+            document.getElementById('total-archives').textContent = archives.length;
+            document.getElementById('departments-count').textContent = new Set(archives.map(a => a.department)).size;
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            document.getElementById('this-month-archives').textContent = archives.filter(a => 
+                a.month === currentMonth && a.year === currentYear
+            ).length;
+
+            const departmentStats = archives.reduce((acc, archive) => {
+                const key = `${archive.department} - ${archive.section}`;
+                acc[key] = (acc[key] || 0) + 1;
+                return acc;
+            }, {});
+            const maxCount = Math.max(...Object.values(departmentStats));
+            const departmentStatsContainer = document.getElementById('department-stats');
+            departmentStatsContainer.innerHTML = Object.keys(departmentStats).length > 0 ? 
+                Object.entries(departmentStats)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([key, count]) => `
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">${key}</span>
+                            <div class="flex items-center space-x-2">
+                                <div class="bg-blue-200 h-2 rounded-full w-20">
+                                    <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: ${Math.max((count / maxCount) * 100, 10)}%"></div>
+                                </div>
+                                <span class="text-sm font-medium text-gray-900">${count}</span>
+                            </div>
+                        </div>
+                    `).join('') : 
+                '<p class="text-gray-500 text-center py-8">Aucune archive disponible</p>';
+
+            const recentArchives = archives
+                .sort((a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime())
+                .slice(0, 5);
+            document.getElementById('recent-archives').innerHTML = recentArchives.length > 0 ? 
+                recentArchives.map(archive => `
+                    <div class="flex justify-between items-start border-b border-gray-100 pb-3">
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-900 truncate">${archive.fileName}</p>
+                            <p class="text-sm text-gray-500">${archive.department} - ${archive.section}</p>
+                        </div>
+                        <span class="text-xs text-gray-400 ml-2">${new Date(archive.uploadDate).toLocaleDateString('fr-FR')}</span>
+                    </div>
+                `).join('') : 
+                '<p class="text-gray-500 text-center py-8">Aucune archive récente</p>';
+
+            lucide.createIcons();
+        }
+
+        // Upload logic
+        const fileInput = document.getElementById('file-upload');
+        const fileNameInput = document.getElementById('fileName');
+        const departmentSelect = document.getElementById('department');
+        const sectionSelect = document.getElementById('section');
+        const fileNameDisplay = document.getElementById('file-name-display');
+        const submitBtn = document.getElementById('submit-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const uploadForm = document.getElementById('upload-form');
+        const uploadContainer = document.getElementById('upload-container');
+        const successMessage = document.getElementById('success-message');
+        const uploadFormContainer = document.getElementById('upload-form-container');
+
+        let selectedFile = null;
+        document.getElementById('current-day').textContent = new Date().getDate();
+        document.getElementById('current-month').textContent = months[new Date().getMonth()];
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+
+        fileInput.addEventListener('change', (e) => {
+            selectedFile = e.target.files[0];
+            if (selectedFile) {
+                fileNameDisplay.textContent = selectedFile.name;
+                if (!fileNameInput.value) {
+                    fileNameInput.value = selectedFile.name;
+                }
+                updateSubmitButton();
+            }
+        });
+
+        function updateSubmitButton() {
+            submitBtn.disabled = !fileNameInput.value || !departmentSelect.value || !sectionSelect.value || !selectedFile;
+        }
+
+        fileNameInput.addEventListener('input', updateSubmitButton);
+        departmentSelect.addEventListener('change', updateSubmitButton);
+        sectionSelect.addEventListener('change', updateSubmitButton);
+
+        cancelBtn.addEventListener('click', () => {
+            fileNameInput.value = '';
+            departmentSelect.value = '';
+            sectionSelect.value = '';
+            selectedFile = null;
+            fileNameDisplay.textContent = 'Cliquez pour sélectionner un fichier';
+            fileInput.value = '';
+            updateSubmitButton();
+        });
+
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!fileNameInput.value || !departmentSelect.value || !sectionSelect.value || !selectedFile) return;
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Archivage...
+            `;
+            lucide.createIcons();
+
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            const now = new Date();
+            const archive = {
+                id: Date.now().toString(),
+                fileName: fileNameInput.value,
+                department: departmentSelect.value,
+                section: sectionSelect.value,
+                day: now.getDate(),
+                month: now.getMonth(),
+                year: now.getFullYear(),
+                uploadDate: now.toISOString(),
+                fileSize: selectedFile.size,
+                fileType: selectedFile.type || 'application/octet-stream'
+            };
+
+            archives.push(archive);
+            updateDashboard();
+            updateSearchResults();
+
+            uploadFormContainer.classList.add('hidden');
+            successMessage.classList.remove('hidden');
+
+            setTimeout(() => {
+                successMessage.classList.add('hidden');
+                uploadFormContainer.classList.remove('hidden');
+                fileNameInput.value = '';
+                departmentSelect.value = '';
+                sectionSelect.value = '';
+                selectedFile = null;
+                fileNameDisplay.textContent = 'Cliquez pour sélectionner un fichier';
+                fileInput.value = '';
+                submitBtn.innerHTML = `
+                    <i data-lucide="upload" class="h-4 w-4 mr-2"></i>
+                    Archiver le Document
+                `;
+                updateSubmitButton();
+                lucide.createIcons();
+            }, 2000);
+        });
+
+        // Search logic
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function updateSearchResults() {
+            const searchTerm = document.getElementById('search-term').value;
+            const selectedDepartment = document.getElementById('search-department').value;
+            const selectedSection = document.getElementById('search-section').value;
+            const selectedMonth = document.getElementById('search-month').value;
+            const selectedYear = document.getElementById('search-year').value;
+
+            const filteredArchives = archives.filter(archive => {
+                const matchesSearch = archive.fileName.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesDepartment = !selectedDepartment || archive.department === selectedDepartment;
+                const matchesSection = !selectedSection || archive.section === selectedSection;
+                const matchesMonth = !selectedMonth || archive.month === parseInt(selectedMonth);
+                const matchesYear = !selectedYear || archive.year === parseInt(selectedYear);
+                return matchesSearch && matchesDepartment && matchesSection && matchesMonth && matchesYear;
+            });
+
+            const resultsContainer = document.getElementById('search-results');
+            const resultsCount = document.getElementById('results-count');
+            resultsContainer.innerHTML = '';
+            resultsCount.textContent = `${filteredArchives.length} document(s) trouvé(s)`;
+
+            if (filteredArchives.length > 0) {
+                filteredArchives.forEach(archive => {
+                    const date = `${archive.day} ${months[archive.month]} ${archive.year}`;
+                    resultsContainer.innerHTML += `
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-start space-x-3 flex-1">
+                                    <div class="bg-blue-100 p-2 rounded-lg">
+                                        <i data-lucide="file-text" class="h-5 w-5 text-blue-600"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="text-lg font-medium text-gray-900 truncate">${archive.fileName}</h3>
+                                        <div class="flex flex-wrap gap-4 mt-2 text-sm text-gray-600">
+                                            <div class="flex items-center">
+                                                <i data-lucide="building" class="h-4 w-4 mr-1"></i>
+                                                ${archive.department} - ${archive.section}
+                                            </div>
+                                            <div class="flex items-center">
+                                                <i data-lucide="calendar" class="h-4 w-4 mr-1"></i>
+                                                ${date}
+                                            </div>
+                                            <span>${formatFileSize(archive.fileSize)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex space-x-2 ml-4">
+                                    <a href="/Uploads/${archive.fileName}" download>
+                                        <button class="btn-secondary text-sm">Télécharger</button>
+                                    </a>
+                                    <a href="/Uploads/${archive.fileName}" target="_blank" rel="noopener noreferrer">
+                                        <button class="btn-primary text-sm">Voir</button>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                resultsContainer.innerHTML = `
+                    <div class="text-center py-12">
+                        <i data-lucide="search" class="h-12 w-12 text-gray-300 mx-auto mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun résultat trouvé</h3>
+                        <p class="text-gray-500">Essayez de modifier vos critères de recherche ou d'ajouter des archives.</p>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        document.getElementById('search-term').addEventListener('input', updateSearchResults);
+        document.getElementById('search-department').addEventListener('change', updateSearchResults);
+        document.getElementById('search-section').addEventListener('change', updateSearchResults);
+        document.getElementById('search-month').addEventListener('change', updateSearchResults);
+        document.getElementById('search-year').addEventListener('change', updateSearchResults);
+        document.getElementById('clear-filters').addEventListener('click', () => {
+            document.getElementById('search-term').value = '';
+            document.getElementById('search-department').value = '';
+            document.getElementById('search-section').value = '';
+            document.getElementById('search-month').value = '';
+            document.getElementById('search-year').value = '';
+            updateSearchResults();
+        });
+
+        // Initial render
+        updateDashboard();
+        updateSearchResults();
+        setActiveTab('dashboard');
+    </script>
+</body>
+</html>
